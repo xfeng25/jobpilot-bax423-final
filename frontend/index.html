@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>JobPilot — BAX-423</title>
+  <link rel="stylesheet" href="/static/styles.css"/>
+</head>
+<body>
+<div class="shell">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">✈</div>
+      <h1>JobPilot</h1>
+    </div>
+    <nav>
+      <button class="nav-btn active" data-page="profile">👤 Profile</button>
+      <button class="nav-btn" data-page="jobs">💼 Jobs</button>
+      <button class="nav-btn" data-page="resume">📄 Resume</button>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <h2 id="pageTitle">Your Profile</h2>
+        <p id="pageSubtitle">🔒 Your profile data is kept private and secure.</p>
+      </div>
+      <div class="topbar-right">
+        <div class="persona-wrap">
+          <span>Demo Persona</span>
+          <select id="personaSelect">
+            <option value="">Select a persona</option>
+            <option value="aisha">Aisha — ML Career Pivoter</option>
+            <option value="marcus">Marcus — New Grad</option>
+            <option value="priya">Priya — Senior/Niche</option>
+            <option value="kenji">Kenji — Visa Constrained</option>
+          </select>
+        </div>
+        <div class="acct-btn">
+          <div class="avatar" id="avatarInitials">XF</div>
+          <span id="accountName">Xia Feng</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PROFILE PAGE ═══ -->
+    <section class="page active" id="profilePage">
+
+      <!-- Upload -->
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Upload Resume (Optional)</h3>
+          <span style="font-size:13px;color:var(--muted)">PDF only · up to 10MB</span>
+        </div>
+        <div class="upload-zone" id="uploadZone">
+          <input type="file" id="resumeFile" accept=".pdf" style="display:none"/>
+          <div class="upload-icon">📄</div>
+          <strong id="uploadLabel">Drag & drop your PDF resume here</strong>
+          <p>or click to browse · We'll extract all fields automatically</p>
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('resumeFile').click();event.stopPropagation();" type="button">Upload Resume</button>
+        </div>
+      </div>
+
+      <!-- Personal Info -->
+      <div class="panel gap">
+        <div class="sec-head">
+          <div class="sec-icon">👤</div>
+          <div><h3>Personal Information</h3><p>Add your basic personal details.</p></div>
+          <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="toggleSection('personalForm')">Edit</button>
+        </div>
+        <div id="personalForm" class="form-grid">
+          <label>Full Name *<input id="fName" placeholder="Enter your full name"/></label>
+          <label>Email *<input id="fEmail" type="email" placeholder="Enter your email"/></label>
+          <label>Phone<input id="fPhone" placeholder="Enter your phone number"/></label>
+          <label>LinkedIn URL<input id="fLinkedin" placeholder="linkedin.com/in/yourname"/></label>
+          <label>Current Location<input id="fLocation" placeholder="City, State"/></label>
+          <label>Work Authorization
+            <select id="fWorkAuth">
+              <option value="">Select status</option>
+              <option>U.S. Citizen</option>
+              <option>Permanent Resident</option>
+              <option>F-1 (STEM OPT)</option>
+              <option>F-1 (OPT)</option>
+              <option>H-1B</option>
+              <option>Needs Sponsorship</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <!-- Education -->
+      <div class="panel gap">
+        <div class="sec-head">
+          <div class="sec-icon">🎓</div>
+          <div><h3>Education</h3><p>Add your education background.</p></div>
+          <button class="btn btn-ghost btn-sm" style="margin-left:auto" id="addEduBtn">+ Add Education</button>
+        </div>
+        <div id="eduList"><p class="empty-hint">No education added yet.</p></div>
+      </div>
+
+      <!-- Work Experience -->
+      <div class="panel gap">
+        <div class="sec-head">
+          <div class="sec-icon">💼</div>
+          <div><h3>Work Experience</h3><p>Add your work experience.</p></div>
+          <button class="btn btn-ghost btn-sm" style="margin-left:auto" id="addExpBtn">+ Add Experience</button>
+        </div>
+        <div id="expList"><p class="empty-hint">No work experience added yet.</p></div>
+      </div>
+
+      <!-- Skills -->
+      <div class="panel gap">
+        <div class="sec-head">
+          <div class="sec-icon">✨</div>
+          <div><h3>Skills</h3><p>Add your skills and expertise.</p></div>
+          <button class="btn btn-ghost btn-sm" style="margin-left:auto" id="addSkillBtn">+ Add Skill</button>
+        </div>
+        <div id="skillsWrap">
+          <div class="skill-row" id="skillInputRow" style="display:none">
+            <input id="skillInput" placeholder="Type a skill and press Enter"/>
+            <button class="btn btn-ghost btn-sm" id="skillAddOk">Add</button>
+          </div>
+          <div class="tag-list" id="skillTags"></div>
+          <p class="empty-hint" id="skillsEmpty">No skills added yet.</p>
+        </div>
+      </div>
+
+      <!-- Projects -->
+      <div class="panel gap">
+        <div class="sec-head">
+          <div class="sec-icon">📁</div>
+          <div><h3>Projects</h3><p>Add projects you've worked on.</p></div>
+          <button class="btn btn-ghost btn-sm" style="margin-left:auto" id="addProjBtn">+ Add Project</button>
+        </div>
+        <div id="projList"><p class="empty-hint">No projects added yet.</p></div>
+      </div>
+
+      <!-- Certifications -->
+      <div class="panel gap">
+        <div class="sec-head">
+          <div class="sec-icon">🏆</div>
+          <div><h3>Certifications <span style="color:var(--green);font-size:13px;font-weight:500">(Optional)</span></h3></div>
+          <button class="btn btn-ghost btn-sm" style="margin-left:auto" id="addCertBtn">+ Add Certification</button>
+        </div>
+        <div id="certList"><p class="empty-hint">No certifications added yet.</p></div>
+      </div>
+
+      <!-- Actions -->
+      <div class="profile-actions">
+        <button class="btn btn-ghost btn-wide" id="saveProfileBtn">Save Profile</button>
+        <button class="btn btn-primary btn-wide" id="goJobsBtn">Save Profile & Continue to Jobs →</button>
+      </div>
+    </section>
+
+    <!-- ═══ JOBS PAGE ═══ -->
+    <section class="page" id="jobsPage">
+
+      <!-- Search Criteria -->
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <h3>Search Criteria</h3>
+            <p style="font-size:13px;color:var(--muted);margin-top:3px">Pre-filled from your profile. Edit before searching.</p>
+          </div>
+        </div>
+        <div class="crit-grid">
+          <div class="crit-cell"><span>Target Role</span><input id="cRole" placeholder="e.g. ML Engineer"/></div>
+          <div class="crit-cell"><span>Skills</span><input id="cSkills" placeholder="Python, SQL, PyTorch"/></div>
+          <div class="crit-cell"><span>Location</span><input id="cLocation" placeholder="Remote, Bay Area"/></div>
+          <div class="crit-cell"><span>Preferences</span><input id="cPreferences" placeholder="tech, healthcare, research labs"/></div>
+          <div class="crit-cell"><span>Minimum Salary (USD)</span><input id="cSalary" type="number" placeholder="100000"/></div>
+          <div class="crit-cell"><span>Employment Type</span>
+            <select id="cEmpType">
+              <option value="">Any</option>
+              <option>Full-time</option>
+              <option>Contract</option>
+              <option>Part-time</option>
+            </select>
+          </div>
+          <div class="crit-cell"><span>Visa Sponsorship</span>
+            <select id="cVisa">
+              <option value="">Any</option>
+              <option value="H-1B sponsorship required">H-1B Required</option>
+              <option value="OPT friendly">OPT Friendly</option>
+            </select>
+          </div>
+        </div>
+        <!-- Dealbreakers -->
+        <div class="db-wrap">
+          <p>Dealbreakers</p>
+          <div class="db-grid" id="dbGrid"></div>
+        </div>
+        <div class="crit-actions">
+          <button class="btn btn-primary" id="findJobsBtn">🔍 Find Matching Jobs</button>
+          <button class="btn btn-ghost" id="resetBtn">Reset</button>
+          <div class="dl-wrap" style="margin-left:auto">
+            <button class="btn btn-ghost" id="dlMenuBtn">⬇ Download Top Jobs ▾</button>
+            <div class="dl-menu" id="dlMenu">
+              <button data-fmt="csv">Download as CSV</button>
+              <button data-fmt="excel">Download as Excel</button>
+              <button data-fmt="json">Download as JSON</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="jobs-layout">
+        <!-- Results -->
+        <div>
+          <div class="results-head">
+            <h3><span id="jobCount">0</span> Jobs Found</h3>
+            <span class="badge badge-green" id="feedbackBadge">0 feedback signals</span>
+          </div>
+          <div id="jobCards">
+            <div style="text-align:center;padding:60px 20px;color:var(--muted)">
+              <p style="font-size:32px;margin-bottom:12px">🔍</p>
+              <p>Click <strong>Find Matching Jobs</strong> to search for opportunities.</p>
+            </div>
+          </div>
+          <div class="pagination" id="paginationRow" style="display:none">
+            <span id="pagInfo"></span>
+            <div class="pg-btns" id="pagBtns"></div>
+          </div>
+        </div>
+
+        <!-- Market Insights -->
+        <div class="panel" style="align-self:start">
+          <div class="panel-head"><h3>Market Insights</h3></div>
+          <div class="insight-section">
+            <h4>Top Skills</h4>
+            <div id="insSkills"></div>
+          </div>
+          <div class="insight-section">
+            <h4>Salary Distribution</h4>
+            <div id="insSalary"></div>
+          </div>
+          <div class="insight-section">
+            <h4>In-Demand Roles</h4>
+            <div id="insRoles"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ RESUME PAGE ═══ -->
+    <section class="page" id="resumePage">
+
+      <!-- Master Resume -->
+      <div class="master-row">
+        <div class="master-file">
+          <span class="file-icon">📄</span>
+          <span id="masterResumeName">No resume uploaded</span>
+        </div>
+        <button class="btn btn-ghost btn-sm" id="viewOriginalBtn" style="display:none">View Original</button>
+      </div>
+
+      <!-- Empty state -->
+      <div id="resumeEmpty" class="panel resume-empty">
+        <div style="font-size:48px;margin-bottom:12px">📄</div>
+        <h3>No generated resumes yet.</h3>
+        <p>Generate a tailored resume from any job recommendation to get started.</p>
+        <button class="btn btn-primary" onclick="navigate('jobs')">Go to Jobs →</button>
+      </div>
+
+      <!-- Editor (hidden until resume generated) -->
+      <div id="resumeEditor" style="display:none">
+        <div class="target-row">
+          <div>
+            <strong>Target Job</strong>
+            <span id="resumeTargetJob" style="margin-left:10px;color:var(--muted)">—</span>
+          </div>
+          <div class="target-score" id="resumeScore">--</div>
+        </div>
+
+        <div class="resume-layout">
+          <div>
+            <div class="panel-head" style="margin-bottom:8px">
+              <div>
+                <p style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Generated Resume (Editable)</p>
+                <h3 id="resumeEditorTitle">—</h3>
+              </div>
+            </div>
+            <div class="editor-bar">
+              <button>Normal</button><button><b>B</b></button><button><i>I</i></button><button><u>U</u></button>
+            </div>
+            <div class="editor-doc">
+              <h5 style="margin-top:0">Personal Information</h5>
+              <textarea id="edPersonal" rows="2" style="font-weight:700;font-size:15px"></textarea>
+              <h5>Summary</h5>
+              <textarea id="edSummary" rows="4"></textarea>
+              <h5>Education</h5>
+              <textarea id="edEducation" rows="3"></textarea>
+              <h5>Experience</h5>
+              <textarea id="edExperience" rows="7"></textarea>
+              <h5>Skills</h5>
+              <textarea id="edSkills" rows="3"></textarea>
+              <h5>Projects</h5>
+              <textarea id="edProjects" rows="4"></textarea>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div class="panel">
+              <h4 style="font-size:14px;font-weight:700;margin-bottom:10px">AI Changes Applied</h4>
+              <div id="aiChanges"></div>
+            </div>
+            <div class="panel">
+              <h4 style="font-size:14px;font-weight:700;margin-bottom:10px">Actions</h4>
+              <button class="btn btn-primary" style="width:100%;margin-bottom:8px" id="saveResumeBtn">Save Resume</button>
+              <button class="btn btn-ghost" style="width:100%;margin-bottom:8px" id="dlPdfBtn">Download PDF</button>
+              <button class="btn btn-ghost" style="width:100%" id="dlDocxBtn">Download DOCX</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Saved Versions -->
+        <div class="panel gap">
+          <div class="panel-head">
+            <h3>Saved Resume Versions</h3>
+            <span class="badge badge-green" id="resumeCount">0 saved</span>
+          </div>
+          <div id="versionsList"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="toast"></div>
+<script src="/static/app.js"></script>
+</body>
+</html>
