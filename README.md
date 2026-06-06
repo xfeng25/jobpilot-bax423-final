@@ -35,15 +35,19 @@ salary, location, and apply-link metadata.
 ## Submission Files
 
 ```
-jobpilot/
-├── backend/          # FastAPI + ML pipeline
-├── frontend/         # HTML + CSS + JS
-├── data/jobs.csv     # Offline snapshot
-├── requirements.txt
-├── render.yaml       # Deployment config
-├── brief.pdf         # Technical brief
-├── prompts.md        # AI prompts used
-└── README.md
+Feng_Xia_BAX423_Final/
+├── code/
+│   ├── backend/          # FastAPI + ML pipeline
+│   ├── frontend/         # HTML + CSS + JS
+│   ├── requirements.txt
+│   ├── Dockerfile        # Cloud Run deployment config
+│   ├── render.yaml       # Render deployment config
+│   ├── run_local.sh      # One-command local runner
+│   └── README.md
+├── data/
+│   └── jobs.csv          # 30,000-posting offline snapshot
+├── brief.pdf             # Technical brief
+└── prompts.md            # AI prompts used
 ```
 
 ## Data Notes

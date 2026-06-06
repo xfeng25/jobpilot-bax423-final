@@ -233,7 +233,7 @@ def load_kaggle_jobs(csv_path: str, limit: int = 30000) -> list[dict]:
                 "visa": _clean_text(row.get("visa", "Unknown"), "Unknown"),
                 "required_years": required_years,
                 "company_size": company_size,
-                "description": description[:1000],
+                "description": description,
                 "skills_extracted": skills,
                 "link": link,
                 "source": _clean_text(row.get("source", ""), "kaggle"),
@@ -305,7 +305,7 @@ def load_techmap_jsonl_jobs(json_path: str, limit: int = 30000) -> list[dict]:
                     "visa": "Unknown",
                     "required_years": required_years,
                     "company_size": 0,
-                    "description": description[:1000],
+                    "description": description,
                     "skills_extracted": extract_skills(description),
                     "link": link,
                     "source": source,
@@ -344,7 +344,7 @@ def fetch_adzuna_jobs(app_id: str, app_key: str, query: str = "data analyst", co
                     "salary_display": f"${sal_min:,}–${sal_max:,}" if sal_max > 0 else "Competitive",
                     "industry": item.get("category", {}).get("label", "General"),
                     "visa": "Not specified", "required_years": 0, "company_size": 0,
-                    "description": description[:1000],
+                    "description": description,
                     "skills_extracted": extract_skills(description),
                     "link": item.get("redirect_url", ""), "source": "adzuna",
                 })
@@ -415,6 +415,15 @@ def market_insights(jobs: list[dict]) -> dict:
     total_roles = sum(c for _, c in top_roles_raw) or 1
     top_roles_pct = [[r, round(c / total_roles * 100, 1)] for r, c in top_roles_raw]
 
+    location_counts: dict[str, int] = {}
+    for job in jobs:
+        loc = (job.get("location", "") or "").strip()
+        if loc and loc.lower() not in ("nan", "unknown"):
+            location_counts[loc] = location_counts.get(loc, 0) + 1
+    top_locations_raw = sorted(location_counts.items(), key=lambda x: -x[1])[:8]
+    total_locations = sum(c for _, c in top_locations_raw) or 1
+    top_locations_pct = [[loc, round(c / total_locations * 100, 1)] for loc, c in top_locations_raw]
+
     # Salary distribution — include competitive bucket
     salary_buckets = {"Not Listed": 0, "<80K": 0, "80K-100K": 0, "100K-130K": 0, "130K-160K": 0, "160K+": 0}
     for job in jobs:
@@ -434,6 +443,7 @@ def market_insights(jobs: list[dict]) -> dict:
     return {
         "top_skills": top_skills_pct,
         "in_demand_roles": top_roles_pct,
+        "top_locations": top_locations_pct,
         "salary_distribution": salary_pct,
         "total_jobs": len(jobs),
     }

@@ -29,6 +29,20 @@ nav{display:flex;flex-direction:column;gap:4px;}
 .acct-btn{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:8px;padding:7px 12px;background:#fff;font-weight:600;font-size:14px;}
 .avatar{width:32px;height:32px;border-radius:50%;background:var(--green-light);color:var(--green-dark);display:grid;place-items:center;font-weight:800;font-size:13px;}
 .page{display:none;}.page.active{display:block;}
+.dash-hero{display:flex;justify-content:space-between;align-items:center;gap:18px;background:linear-gradient(135deg,#ffffff 0%,#ecfdf5 100%);border:1px solid var(--line);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow-sm);margin-bottom:16px;}
+.dash-hero .eyebrow{font-size:12px;font-weight:800;color:var(--green-dark);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;}
+.dash-hero h3{font-size:24px;font-weight:900;margin-bottom:6px;}
+.dash-hero p:last-child{color:var(--muted);max-width:720px;line-height:1.5;}
+.dash-stat{min-width:150px;border:1px solid #a7f3d0;background:#fff;border-radius:8px;padding:16px;text-align:center;}
+.dash-stat span{display:block;font-size:30px;font-weight:900;color:var(--green-dark);line-height:1;}
+.dash-stat small{display:block;margin-top:6px;color:var(--muted);font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:.04em;}
+.dashboard-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.dash-card{min-height:250px;}
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;}
+.market-table{width:100%;border-collapse:collapse;background:#fff;font-size:14px;}
+.market-table th,.market-table td{padding:13px 16px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;}
+.market-table th{background:var(--soft);font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:800;}
+.market-table tr:last-child td{border-bottom:none;}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow-sm);}
 .panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
 .panel-head h3{font-size:16px;font-weight:700;}
@@ -136,6 +150,10 @@ textarea{resize:vertical;line-height:1.5;}
 .resume-empty h3{font-size:20px;font-weight:700;margin-bottom:8px;}
 .resume-empty p{color:var(--muted);margin-bottom:20px;}
 .resume-layout{display:grid;grid-template-columns:1fr 280px;gap:18px;margin-top:14px;}
+.doc-tabs{display:flex;gap:6px;margin-bottom:12px;border-bottom:1px solid var(--line);}
+.doc-tab{border:none;background:transparent;padding:10px 12px;font-weight:800;color:var(--muted);border-bottom:2px solid transparent;}
+.doc-tab.active{color:var(--green-dark);border-bottom-color:var(--green);}
+.doc-tab:hover{color:var(--green-dark);}
 .master-row{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);background:#fff;margin-bottom:12px;}
 .master-file{display:flex;align-items:center;gap:10px;font-weight:700;}
 .file-icon{color:#7c3aed;font-size:20px;}
@@ -161,7 +179,7 @@ textarea{resize:vertical;line-height:1.5;}
 #toast.show{opacity:1;}
 #toast.success{background:#065f46;}
 #toast.error{background:#991b1b;}
-@media(max-width:1100px){.jobs-layout,.resume-layout{grid-template-columns:1fr;}.form-grid{grid-template-columns:repeat(2,1fr);}.why-grid{grid-template-columns:repeat(2,1fr);}.crit-grid{grid-template-columns:repeat(2,1fr);}.db-grid{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:1100px){.jobs-layout,.resume-layout,.dashboard-grid{grid-template-columns:1fr;}.form-grid{grid-template-columns:repeat(2,1fr);}.why-grid{grid-template-columns:repeat(2,1fr);}.crit-grid{grid-template-columns:repeat(2,1fr);}.db-grid{grid-template-columns:repeat(2,1fr);}.dash-hero{align-items:flex-start;flex-direction:column;}}
 @media(max-width:768px){.shell{grid-template-columns:1fr;}.sidebar{position:static;height:auto;}.main{padding:16px;}.form-grid,.crit-grid,.db-grid{grid-template-columns:1fr 1fr;}.job-card-top{grid-template-columns:1fr;}}
 
 /* Job card feedback states */

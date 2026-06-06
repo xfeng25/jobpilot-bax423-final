@@ -15,7 +15,8 @@
       <h1>JobPilot</h1>
     </div>
     <nav>
-      <button class="nav-btn active" data-page="profile">👤 Profile</button>
+      <button class="nav-btn active" data-page="dashboard">📊 Dashboard</button>
+      <button class="nav-btn" data-page="profile">👤 Profile</button>
       <button class="nav-btn" data-page="jobs">💼 Jobs</button>
       <button class="nav-btn" data-page="resume">📄 Resume</button>
     </nav>
@@ -25,8 +26,8 @@
     <!-- Topbar -->
     <div class="topbar">
       <div class="topbar-left">
-        <h2 id="pageTitle">Your Profile</h2>
-        <p id="pageSubtitle">🔒 Your profile data is kept private and secure.</p>
+        <h2 id="pageTitle">Dashboard</h2>
+        <p id="pageSubtitle">Job market overview from the full ingested dataset.</p>
       </div>
       <div class="topbar-right">
         <div class="persona-wrap">
@@ -46,8 +47,53 @@
       </div>
     </div>
 
+    <!-- ═══ DASHBOARD PAGE ═══ -->
+    <section class="page active" id="dashboardPage">
+      <div class="dash-hero">
+        <div>
+          <p class="eyebrow">Job Market Overview</p>
+          <h3>Dataset-wide hiring signals</h3>
+          <p>Aggregate skills, salary ranges, roles, and locations from the loaded Kaggle sample plus current API postings.</p>
+        </div>
+        <div class="dash-stat">
+          <span id="dashJobCount">--</span>
+          <small>jobs indexed</small>
+        </div>
+      </div>
+
+      <div class="dashboard-grid">
+        <div class="panel dash-card">
+          <div class="panel-head"><h3>Top Skills in Demand</h3></div>
+          <div id="dashSkills"></div>
+        </div>
+        <div class="panel dash-card">
+          <div class="panel-head"><h3>Salary Range Distribution</h3></div>
+          <div id="dashSalary"></div>
+        </div>
+        <div class="panel dash-card">
+          <div class="panel-head"><h3>Top Locations</h3></div>
+          <div id="dashLocations"></div>
+        </div>
+      </div>
+
+      <div class="panel gap">
+        <div class="panel-head">
+          <div>
+            <h3>Current Market - Top Job Opportunities</h3>
+            <p style="font-size:13px;color:var(--muted);margin-top:3px">Most common title and location combinations in the loaded dataset.</p>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="market-table">
+            <thead><tr><th>Job Title</th><th>Top Company</th><th>Location</th><th>Avg. Salary</th><th>Job Count</th></tr></thead>
+            <tbody id="dashOpportunities"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
     <!-- ═══ PROFILE PAGE ═══ -->
-    <section class="page active" id="profilePage">
+    <section class="page" id="profilePage">
 
       <!-- Upload -->
       <div class="panel">
@@ -200,7 +246,6 @@
             <button class="btn btn-ghost" id="dlMenuBtn">⬇ Download Top Jobs ▾</button>
             <div class="dl-menu" id="dlMenu">
               <button data-fmt="csv">Download as CSV</button>
-              <button data-fmt="excel">Download as Excel</button>
               <button data-fmt="json">Download as JSON</button>
             </div>
           </div>
@@ -212,7 +257,6 @@
         <div>
           <div class="results-head">
             <h3><span id="jobCount">0</span> Jobs Found</h3>
-            <span class="badge badge-green" id="feedbackBadge">0 feedback signals</span>
           </div>
           <div id="jobCards">
             <div style="text-align:center;padding:60px 20px;color:var(--muted)">
@@ -277,16 +321,20 @@
 
         <div class="resume-layout">
           <div>
+            <div class="doc-tabs">
+              <button class="doc-tab active" id="resumeDocTab" data-doc="resume">Generated Resume</button>
+              <button class="doc-tab" id="coverDocTab" data-doc="cover">Generate Cover Letter</button>
+            </div>
             <div class="panel-head" style="margin-bottom:8px">
               <div>
-                <p style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Generated Resume (Editable)</p>
+                <p id="docEditorLabel" style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Generated Resume (Editable)</p>
                 <h3 id="resumeEditorTitle">—</h3>
               </div>
             </div>
             <div class="editor-bar">
               <button>Normal</button><button><b>B</b></button><button><i>I</i></button><button><u>U</u></button>
             </div>
-            <div class="editor-doc">
+            <div class="editor-doc" id="resumeDocFields">
               <h5 style="margin-top:0">Personal Information</h5>
               <textarea id="edPersonal" rows="2" style="font-weight:700;font-size:15px"></textarea>
               <h5>Summary</h5>
@@ -299,6 +347,10 @@
               <textarea id="edSkills" rows="3"></textarea>
               <h5>Projects</h5>
               <textarea id="edProjects" rows="4"></textarea>
+            </div>
+            <div class="editor-doc" id="coverDocFields" style="display:none">
+              <h5 style="margin-top:0">Cover Letter</h5>
+              <textarea id="edCoverLetter" rows="22"></textarea>
             </div>
           </div>
 
@@ -319,7 +371,7 @@
         <!-- Saved Versions -->
         <div class="panel gap">
           <div class="panel-head">
-            <h3>Saved Resume Versions</h3>
+            <h3 id="savedVersionsTitle">Saved Resume Versions</h3>
             <span class="badge badge-green" id="resumeCount">0 saved</span>
           </div>
           <div id="versionsList"></div>

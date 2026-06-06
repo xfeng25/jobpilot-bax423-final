@@ -3,7 +3,7 @@ const PERSONAS = {
   aisha:{
     name:"Aisha Patel",email:"aisha.patel@example.com",phone:"415-555-0133",
     linkedin:"linkedin.com/in/aishapatel",currentLocation:"San Francisco, CA",workAuth:"U.S. Citizen",
-    education:[{school:"UC Davis",degree:"MSBA",major:"Business Analytics",start:"2024-09",end:"2026-06"}],
+    education:[{school:"UC Davis",degree:"Master",major:"Business Analytics",start:"2020-09",end:"2023-06"}],
     experience:[{company:"BrightRetail",title:"Data Analyst",start:"2023-05",end:"Present",current:true,
       description:"Used Python, SQL, pandas, and scikit-learn for retail forecasting and customer segmentation. Basic PyTorch exposure through coursework."}],
     skills:["Python","SQL","pandas","scikit-learn","basic PyTorch"],
@@ -18,7 +18,7 @@ const PERSONAS = {
   marcus:{
     name:"Marcus Chen",email:"marcus.chen@ucdavis.edu",phone:"530-555-0187",
     linkedin:"linkedin.com/in/marcuschen-msba",currentLocation:"Davis, CA",workAuth:"U.S. Citizen",
-    education:[{school:"UC Davis",degree:"MSBA",major:"Business Analytics",start:"2024-09",end:"2026-06"}],
+    education:[{school:"UC Davis",degree:"Master",major:"Business Analytics",start:"2024-09",end:"2026-06"}],
     experience:[
       {company:"Sutter Health",title:"Analytics Intern",start:"2025-06",end:"2025-09",current:false,
         description:"Built Tableau dashboards and SQL models for clinic operations."},
@@ -37,7 +37,7 @@ const PERSONAS = {
   priya:{
     name:"Priya Raman",email:"priya.raman@example.com",phone:"212-555-0194",
     linkedin:"linkedin.com/in/priyaraman",currentLocation:"New York, NY",workAuth:"U.S. Citizen",
-    education:[{school:"Rutgers University",degree:"BS",major:"Computer Science",start:"2015-09",end:"2019-05"}],
+    education:[{school:"Rutgers University",degree:"Bachelor",major:"Computer Science",start:"2015-09",end:"2019-05"}],
     experience:[{company:"FinCore",title:"Senior Software Engineer",start:"2019-07",end:"Present",current:true,
       description:"Built Java/Python microservices, Kafka pipelines, Spark jobs, Kubernetes deployments for fintech."}],
     skills:["Java","Python","Kubernetes","microservices","Kafka","Spark","some TensorFlow","AWS"],
@@ -52,7 +52,7 @@ const PERSONAS = {
   kenji:{
     name:"Kenji Nakamura",email:"kenji.nakamura@example.com",phone:"650-555-0151",
     linkedin:"linkedin.com/in/kenjinakamura",currentLocation:"Palo Alto, CA",workAuth:"F-1 (STEM OPT)",
-    education:[{school:"Stanford University",degree:"MS",major:"Computer Science",start:"2024-09",end:"2026-06"}],
+    education:[{school:"Stanford University",degree:"Master",major:"Computer Science",start:"2024-09",end:"2026-06"}],
     experience:[{company:"VisionLab",title:"Graduate Researcher",start:"2024-09",end:"Present",current:true,
       description:"Published research in PyTorch-based NLP and computer vision. Authored 2 conference papers."}],
     skills:["Python","C++","deep learning","PyTorch","NLP","computer vision","published research"],
@@ -71,16 +71,23 @@ const PER_PAGE = 10;
 
 // ─── State ────────────────────────────────────────────────────────────────────
 const S = {
+  activeProfileId: "custom",
   profile: blankProfile(),
   dealbreakers: [],
   allJobs: [],
   page: 1,
   feedback: {},
   resumes: [],
+  coverLetters: [],
   activeResume: null,   // unsaved generated resume (not yet in list)
+  activeCoverLetter: null,
   activeResumeId: null, // id of saved resume being viewed/edited
+  activeCoverLetterId: null,
+  activeDocType: "resume",
+  activeJob: null,
   masterResumeName: null,
   masterResumeText: null, // original PDF text for View Original
+  masterResumeUrl: null,
 };
 
 function blankProfile(){
@@ -101,6 +108,7 @@ function toast(msg, type="success"){
 
 // ─── Navigation ───────────────────────────────────────────────────────────────
 const PAGE_META = {
+  dashboard: ["Dashboard","Job market overview from the full ingested dataset."],
   profile: ["Your Profile","🔒 Your profile data is kept private and secure."],
   jobs: ["Jobs","Find the best opportunities that match your profile."],
   resume: ["Resume","Review and edit your AI-generated resume for the selected job."]
@@ -123,6 +131,7 @@ async function init(){
   bindResume();
   renderProfile();
   renderDefaultInsights();
+  loadDashboard();
   // Load real market insights from backend on startup
   try{
     const r=await fetch("/api/jobs/search",{method:"POST",headers:{"Content-Type":"application/json"},
@@ -168,10 +177,17 @@ function bindNav(){
 
 function resetResumeState(){
   S.resumes=[];
+  S.coverLetters=[];
   S.activeResume=null;
+  S.activeCoverLetter=null;
   S.activeResumeId=null;
+  S.activeCoverLetterId=null;
+  S.activeDocType="resume";
+  S.activeJob=null;
   S.masterResumeName=null;
   S.masterResumeText=null;
+  if(S.masterResumeUrl) URL.revokeObjectURL(S.masterResumeUrl);
+  S.masterResumeUrl=null;
   $("uploadLabel").textContent="Drag & drop your PDF resume here";
   $("uploadZone").classList.remove("has-file");
   $("masterResumeName").textContent="No resume uploaded";
@@ -182,6 +198,37 @@ function resetResumeState(){
   if($("resumeEditor")) $("resumeEditor").style.display="none";
 }
 
+async function loadDashboard(){
+  try{
+    const res=await fetch("/api/dashboard");
+    if(!res.ok) throw new Error("Dashboard failed");
+    const data=await res.json();
+    renderDashboard(data);
+  }catch(err){
+    console.warn("Dashboard failed:",err);
+    renderDashboard({job_count:0,insights:null,top_opportunities:[]});
+  }
+}
+
+function renderDashboard(data){
+  const ins=data.insights||{};
+  $("dashJobCount").textContent=(data.job_count||ins.total_jobs||0).toLocaleString();
+  if(ins.top_skills?.length) renderBars("dashSkills",ins.top_skills.map(([l,v])=>[l,Number(v)]));
+  else $("dashSkills").innerHTML='<p class="empty-hint">No skill data available.</p>';
+  if(ins.salary_distribution?.length) renderBars("dashSalary",ins.salary_distribution.map(([l,v])=>[l,Number(v)]));
+  else $("dashSalary").innerHTML='<p class="empty-hint">No salary data available.</p>';
+  if(ins.top_locations?.length) renderBars("dashLocations",ins.top_locations.map(([l,v])=>[l,Number(v)]));
+  else $("dashLocations").innerHTML='<p class="empty-hint">No location data available.</p>';
+  const rows=data.top_opportunities||[];
+  $("dashOpportunities").innerHTML=rows.length?rows.map(r=>`<tr>
+    <td>${esc(r.title)}</td>
+    <td>${esc(r.company)}</td>
+    <td>${esc(r.location)}</td>
+    <td>${r.avg_salary?`$${Number(r.avg_salary).toLocaleString()}`:"Not listed"}</td>
+    <td><strong>${Number(r.job_count||0).toLocaleString()}</strong></td>
+  </tr>`).join(""):'<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:18px">No opportunities available.</td></tr>';
+}
+
 // ─── Profile ──────────────────────────────────────────────────────────────────
 function bindProfile(){
   // Persona select
@@ -189,11 +236,15 @@ function bindProfile(){
     const key=e.target.value;
     if(key&&PERSONAS[key]){
       const p=PERSONAS[key];
+      S.activeProfileId=key;
       S.profile={name:p.name,email:p.email,phone:p.phone,linkedin:p.linkedin,
         currentLocation:p.currentLocation,workAuth:p.workAuth,
         education:[...p.education],experience:[...p.experience],
         skills:[...p.skills],projects:[...p.projects],certifications:[...(p.certifications||[])]};
       setDealbreakers(p.dealbreakers||[]);
+      S.feedback={};
+      S.allJobs=[];
+      S.page=1;
       // Sync jobs filters from persona
       $("cRole").value=p.cRole||"";
       $("cSkills").value=p.cSkills||"";
@@ -205,7 +256,11 @@ function bindProfile(){
       resetResumeState();
       renderProfile();
     } else {
+      S.activeProfileId="custom";
       S.profile=blankProfile(); S.dealbreakers=[];
+      S.feedback={};
+      S.allJobs=[];
+      S.page=1;
       setDealbreakers([]); renderProfile();
       $("cRole").value=""; $("cSkills").value=""; $("cLocation").value=""; $("cPreferences").value="";
       $("cSalary").value=""; $("cEmpType").value=""; $("cVisa").value="";
@@ -219,6 +274,8 @@ function bindProfile(){
     $("uploadLabel").textContent=file.name;
     $("uploadZone").classList.add("has-file");
     S.masterResumeName=file.name;
+    if(S.masterResumeUrl) URL.revokeObjectURL(S.masterResumeUrl);
+    S.masterResumeUrl=URL.createObjectURL(file);
     $("masterResumeName").textContent=file.name;
     toast("Extracting resume...");
     try{
@@ -456,7 +513,7 @@ async function findJobs(){
   const btn=$("findJobsBtn"); btn.textContent="Ranking..."; btn.disabled=true;
   try{
     const payload={
-      profile:{id:"default",name:S.profile.name,email:S.profile.email,
+      profile:{id:S.activeProfileId||"custom",name:S.profile.name,email:S.profile.email,
         current_location:S.profile.currentLocation,work_authorization:S.profile.workAuth,
         education:S.profile.education,experience:S.profile.experience,skills:S.profile.skills,
         projects:S.profile.projects.map(x=>({name:x.name,description:x.description,tech_stack:x.tech})),
@@ -479,9 +536,6 @@ async function findJobs(){
     renderJobsPage();
     if(data.market_insights) renderInsights(data.market_insights);
     if(data.learned_preferences) renderLearned(data.learned_preferences);
-    if(data.benchmark?.available) $("feedbackBadge").textContent=`Feedback NDCG@10: ${data.benchmark.ndcg_at_10}`;
-    else if(data.benchmark) $("feedbackBadge").textContent=`Feedback NDCG: ${data.benchmark.message}`;
-    else $("feedbackBadge").textContent="";
   }catch(err){
     console.error(err); toast("⚠️ Search failed. Is the backend running?","error");
   }finally{btn.textContent="🔍 Find Matching Jobs";btn.disabled=false;}
@@ -524,6 +578,7 @@ function makeCard(job){
   const jid=job.job_id||"";
   const fb=S.feedback[jid];
   const sal=job.salary_display||(job.salary_max>0?`$${job.salary_min?.toLocaleString()}–$${job.salary_max?.toLocaleString()}`:"Salary not listed");
+  const skillDisplay=why.skill_signal_count===0?"Limited data":`${why.skill_match||0}%`;
   const card=document.createElement("div");
   let cardClass="job-card";
   if(fb===1) cardClass+=" accepted";
@@ -550,7 +605,7 @@ function makeCard(job){
       </div>
     </div>
     <div class="why-grid">
-      <div class="why-item"><span class="wlabel">Skill Match</span><div class="wval">${why.skill_match||0}%</div></div>
+      <div class="why-item"><span class="wlabel">Skill Match</span><div class="wval">${skillDisplay}</div></div>
       <div class="why-item"><span class="wlabel">Location Match</span><div class="wval">${why.location_match||0}%</div></div>
       <div class="why-item"><span class="wlabel">Salary Match</span><div class="wval">${why.salary_match||0}%</div></div>
       <div class="why-item"><span class="wlabel">Embedding Similarity</span><div class="wval">${why.embedding_similarity||0}%</div></div>
@@ -575,7 +630,7 @@ async function sendFeedback(jid,action,job){
   S.feedback[jid]=action==="accept"?1:action==="reject"?-1:0;
   try{
     const res=await fetch("/api/feedback",{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({profile_id:"default",job_id:jid,action})});
+      body:JSON.stringify({profile_id:S.activeProfileId||"custom",job_id:jid,action})});
     if(res.ok){const d=await res.json();if(d.learned_preferences)renderLearned(d.learned_preferences);}
   }catch(e){}
   renderJobsPage();
@@ -622,7 +677,7 @@ function exportJobs(fmt){
     "Salary":j.salary_display||"Competitive",
     "Match Score":(j.match_score||0)+"%",
     "Apply Link":j.link||"",
-    "Description":(j.description||"").slice(0,300)
+    "Description":j.description||""
   }));
   if(fmt==="json"){dlBlob("jobpilot_top10.json",JSON.stringify(rows,null,2),"application/json");return;}
   const csv="\uFEFF"+toCSV(rows);
@@ -634,32 +689,12 @@ function bindResume(){
   $("saveResumeBtn").addEventListener("click",saveEdits);
   $("dlPdfBtn").addEventListener("click",()=>dlResume("pdf"));
   $("dlDocxBtn").addEventListener("click",()=>dlResume("docx"));
+  $("resumeDocTab").addEventListener("click",()=>switchDocType("resume"));
+  $("coverDocTab").addEventListener("click",()=>switchDocType("cover"));
   $("viewOriginalBtn").addEventListener("click",()=>{
     if(!S.masterResumeName){toast("No resume uploaded","error");return;}
-    const p=S.profile;
-    // Build personal header
-    const personal=`${p.name||""}\n${[p.email,p.phone,p.currentLocation,p.linkedin].filter(Boolean).join(" | ")}`;
-    // Build experience text
-    const experience=p.experience.map(e=>`${e.title} at ${e.company} (${e.start}–${e.end})\n${e.description||""}`).join("\n\n");
-    // Build skills text
-    const skills=p.skills.join(", ");
-    // Build projects text
-    const projects=p.projects.map(x=>`${x.name}: ${x.description}`).join("\n\n");
-    const education=formatEducation(p.education);
-
-    $("resumeEditorTitle").textContent=S.masterResumeName;
-    $("resumeTargetJob").textContent="Original uploaded resume";
-    $("resumeScore").textContent="--";
-    const ph=$("edPersonal"); if(ph) ph.value=personal;
-    $("edSummary").value="";
-    if($("edEducation")) $("edEducation").value=education;
-    $("edExperience").value=experience;
-    $("edSkills").value=skills;
-    $("edProjects").value=projects;
-    $("aiChanges").innerHTML='<div class="ai-item">Showing original resume content</div>';
-    $("resumeEmpty").style.display="none";
-    $("resumeEditor").style.display="block";
-    toast("Showing original resume");
+    if(!S.masterResumeUrl){toast("Original resume file is not available in this session","error");return;}
+    window.open(S.masterResumeUrl,"_blank","noopener");
   });
 }
 
@@ -669,6 +704,10 @@ async function generateResume(job){
   if(btn){btn.textContent="Generating...";btn.disabled=true;}
   const p=S.profile;
   const personalHeader=`${p.name||"Your Name"}\n${[p.email,p.phone,p.currentLocation,p.linkedin].filter(Boolean).join(" | ")}`;
+  S.activeJob=job;
+  S.activeCoverLetter=null;
+  S.activeCoverLetterId=null;
+  S.activeDocType="resume";
   try{
     const res=await fetch("/api/resume/generate",{method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({
@@ -687,9 +726,9 @@ async function generateResume(job){
     S.activeResume={id:data.id,name:data.name,jobTitle:data.job_title||job.title,
       company:data.company||job.company,matchScore:job.match_score||null,
       created:new Date().toISOString().slice(0,10),personalHeader,
-      summary:data.summary||"",skills:data.skills||"",experience:data.experience||"",
-      education:data.education||formatEducation(p.education),
-      projects:data.projects||"",aiChanges:data.ai_changes||[]};
+      summary:cleanSectionText(data.summary),skills:cleanSectionText(data.skills),experience:cleanSectionText(data.experience),
+      education:cleanSectionText(data.education)||formatEducation(p.education),
+      projects:cleanSectionText(data.projects),aiChanges:data.ai_changes||[],type:"resume",job};
     navigate("resume");
     toast("✅ Resume generated! Edit and click Save when ready.");
   }catch(err){
@@ -704,11 +743,54 @@ async function generateResume(job){
       skills:(rel.length?rel:p.skills).join(", "),
       experience:p.experience.map(e=>`${e.title} at ${e.company} (${e.start}–${e.end})\n${e.description}`).join("\n\n"),
       projects:p.projects.map(x=>`${x.name}: ${x.description}`).join("\n\n"),
-      aiChanges:["Highlighted relevant skills","Tailored summary to target role"]};
+      aiChanges:["Highlighted relevant skills","Tailored summary to target role"],type:"resume",job};
     navigate("resume");
     toast("Resume generated. Edit and click Save when ready.");
   }finally{
     if(btn){btn.textContent="📝 Generate Resume";btn.disabled=false;}
+  }
+}
+
+async function generateCoverLetter(job){
+  readFormIntoState();
+  const p=S.profile;
+  const personalHeader=`${p.name||"Your Name"}\n${[p.email,p.phone,p.currentLocation,p.linkedin].filter(Boolean).join(" | ")}`;
+  $("edCoverLetter").value="Generating cover letter...";
+  $("saveResumeBtn").disabled=true;
+  try{
+    const res=await fetch("/api/cover-letter/generate",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        profile:{id:"default",name:p.name,email:p.email,phone:p.phone,
+          linkedin:p.linkedin,current_location:p.currentLocation,
+          work_authorization:p.workAuth,education:p.education,
+          experience:p.experience,skills:p.skills,
+          projects:p.projects.map(x=>({name:x.name,description:x.description,tech_stack:x.tech})),
+          certifications:p.certifications},
+        job:{job_id:job.job_id,title:job.title,company:job.company,location:job.location,
+          employment_type:job.employment_type,salary_min:job.salary_min,salary_max:job.salary_max,
+          description:job.description,skills_extracted:job.skills_extracted,link:job.link}
+      })});
+    if(!res.ok) throw new Error();
+    const data=await res.json();
+    S.activeCoverLetter={id:data.id,name:data.name,jobTitle:data.job_title||job.title,
+      company:data.company||job.company,matchScore:job.match_score||null,
+      created:new Date().toISOString().slice(0,10),personalHeader,
+      letter:data.letter||"",aiChanges:data.ai_changes||[],type:"cover",job};
+    openCoverLetterObj(S.activeCoverLetter);
+    renderVersions();
+    toast("Cover letter generated. Edit and click Save when ready.");
+  }catch(err){
+    console.warn("Cover letter failed:",err);
+    S.activeCoverLetter={id:`c${Date.now()}`,
+      name:`Cover_Letter_${(job.title||"").replaceAll(" ","_")}_${(job.company||"").replaceAll(" ","_")}`,
+      jobTitle:job.title,company:job.company,matchScore:job.match_score||null,
+      created:new Date().toISOString().slice(0,10),personalHeader,
+      letter:templateCoverLetter(p,job),aiChanges:["Tailored opening to target role","Highlighted relevant profile evidence","Added concise closing paragraph"],type:"cover",job};
+    openCoverLetterObj(S.activeCoverLetter);
+    renderVersions();
+    toast("Cover letter generated. Edit and click Save when ready.");
+  }finally{
+    $("saveResumeBtn").disabled=false;
   }
 }
 
@@ -724,22 +806,24 @@ function renderResumes(){
   }
   $("resumeEmpty").style.display="none";
   $("resumeEditor").style.display="block";
-  $("resumeCount").textContent=`${S.resumes.length} saved`;
   if(hasActive) openResumeObj(S.activeResume);
   else if(hasSaved) openResume(S.resumes[0].id);
+  switchDocType(S.activeDocType||"resume", false);
   renderVersions();
 }
 
 function openResumeObj(r){
   if(!r) return;
+  if(r.job) S.activeJob=r.job;
   $("resumeEditorTitle").textContent=r.name;
   $("resumeTargetJob").textContent=`${r.jobTitle} · ${r.company}`;
   $("resumeScore").textContent=r.matchScore?`${r.matchScore}%`:"--";
-  const ph=$("edPersonal"); if(ph) ph.value=r.personalHeader||"";
-  $("edSummary").value=r.summary||"";
-  if($("edEducation")) $("edEducation").value=r.education||"";
-  $("edExperience").value=r.experience||"";
-  $("edSkills").value=r.skills||""; $("edProjects").value=r.projects||"";
+  setResumeField("edPersonal",r.personalHeader,true);
+  setResumeField("edSummary",r.summary,false);
+  setResumeField("edEducation",r.education,false);
+  setResumeField("edExperience",r.experience,false);
+  setResumeField("edSkills",r.skills,false);
+  setResumeField("edProjects",r.projects,false);
   $("aiChanges").innerHTML=(r.aiChanges||[]).map(c=>`<div class="ai-item">${esc(c)}</div>`).join("")||'<div class="ai-item">Resume tailored to job description</div>';
 }
 
@@ -750,13 +834,58 @@ function openResume(id){
   openResumeObj(r);
 }
 
+function openCoverLetterObj(r){
+  if(!r) return;
+  if(r.job) S.activeJob=r.job;
+  $("resumeEditorTitle").textContent=r.name;
+  $("resumeTargetJob").textContent=`${r.jobTitle} · ${r.company}`;
+  $("resumeScore").textContent=r.matchScore?`${r.matchScore}%`:"--";
+  $("edCoverLetter").value=r.letter||"";
+  $("aiChanges").innerHTML=(r.aiChanges||[]).map(c=>`<div class="ai-item">${esc(c)}</div>`).join("")||'<div class="ai-item">Cover letter tailored to target job</div>';
+}
+
+function openCoverLetter(id){
+  const r=S.coverLetters.find(x=>x.id===id); if(!r) return;
+  S.activeCoverLetter=null;
+  S.activeCoverLetterId=id;
+  openCoverLetterObj(r);
+}
+
+function switchDocType(type, maybeGenerate=true){
+  S.activeDocType=type;
+  const isCover=type==="cover";
+  $("resumeDocTab").classList.toggle("active",!isCover);
+  $("coverDocTab").classList.toggle("active",isCover);
+  $("resumeDocFields").style.display=isCover?"none":"block";
+  $("coverDocFields").style.display=isCover?"block":"none";
+  $("docEditorLabel").textContent=isCover?"Generated Cover Letter (Editable)":"Generated Resume (Editable)";
+  $("saveResumeBtn").textContent=isCover?"Save Cover Letter":"Save Resume";
+  $("savedVersionsTitle").textContent=isCover?"Saved Cover Letter Versions":"Saved Resume Versions";
+  $("resumeCount").textContent=`${(isCover?S.coverLetters:S.resumes).length} saved`;
+  if(isCover){
+    const current=S.activeCoverLetter||(S.activeCoverLetterId?S.coverLetters.find(x=>x.id===S.activeCoverLetterId):null);
+    if(current) openCoverLetterObj(current);
+    else if(S.activeJob&&maybeGenerate) generateCoverLetter(S.activeJob);
+    else {
+      $("resumeEditorTitle").textContent="Cover Letter";
+      $("edCoverLetter").value="Generate a resume for a target job first, then use this tab to create a tailored cover letter.";
+      $("aiChanges").innerHTML='<div class="ai-item">Waiting for a selected target job</div>';
+    }
+  } else {
+    const current=S.activeResume||(S.activeResumeId?S.resumes.find(x=>x.id===S.activeResumeId):null);
+    if(current) openResumeObj(current);
+  }
+  renderVersions();
+}
+
 function renderVersions(){
   const l=$("versionsList"); l.innerHTML="";
-  if(!S.resumes.length){
-    l.innerHTML='<p style="color:var(--muted);font-size:13px;padding:12px 0">No saved resumes yet. Generate and save a resume to see it here.</p>';
+  const list=S.activeDocType==="cover"?S.coverLetters:S.resumes;
+  if(!list.length){
+    l.innerHTML=`<p style="color:var(--muted);font-size:13px;padding:12px 0">No saved ${S.activeDocType==="cover"?"cover letters":"resumes"} yet.</p>`;
     return;
   }
-  S.resumes.forEach(r=>{
+  list.forEach(r=>{
     const row=document.createElement("div"); row.className="version-row";
     row.innerHTML=`<div class="version-name">${esc(r.name)}</div>
       <div class="version-meta">${esc(r.jobTitle)} @ ${esc(r.company)}</div>
@@ -769,25 +898,48 @@ function renderVersions(){
       </div>`;
     l.append(row);
   });
-  l.querySelectorAll("[data-edit]").forEach(b=>b.addEventListener("click",()=>openResume(b.dataset.edit)));
+  l.querySelectorAll("[data-edit]").forEach(b=>b.addEventListener("click",()=>S.activeDocType==="cover"?openCoverLetter(b.dataset.edit):openResume(b.dataset.edit)));
   l.querySelectorAll("[data-dlr]").forEach(b=>b.addEventListener("click",()=>dlResumeById(b.dataset.dlr,b.dataset.fmt)));
   l.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>{
-    S.resumes=S.resumes.filter(r=>r.id!==b.dataset.del);
-    if(S.activeResumeId===b.dataset.del) S.activeResumeId=null;
+    if(S.activeDocType==="cover"){
+      S.coverLetters=S.coverLetters.filter(r=>r.id!==b.dataset.del);
+      if(S.activeCoverLetterId===b.dataset.del) S.activeCoverLetterId=null;
+    } else {
+      S.resumes=S.resumes.filter(r=>r.id!==b.dataset.del);
+      if(S.activeResumeId===b.dataset.del) S.activeResumeId=null;
+    }
     renderResumes();
   }));
 }
 
 function saveEdits(){
+  if(S.activeDocType==="cover"){
+    const updated={letter:$("edCoverLetter").value};
+    if(S.activeCoverLetter){
+      const r={...S.activeCoverLetter,...updated};
+      S.coverLetters.unshift(r);
+      S.activeCoverLetterId=r.id;
+      S.activeCoverLetter=null;
+      $("resumeCount").textContent=`${S.coverLetters.length} saved`;
+      renderVersions();
+      toast("Cover letter saved!");
+    } else if(S.activeCoverLetterId){
+      const r=S.coverLetters.find(x=>x.id===S.activeCoverLetterId);
+      if(r) Object.assign(r,updated);
+      renderVersions();
+      toast("Cover letter updated!");
+    }
+    return;
+  }
   // Read current editor values
   const ph=$("edPersonal"); 
   const updated={
     personalHeader: ph?ph.value:"",
-    summary:$("edSummary").value,
-    education:$("edEducation")?$("edEducation").value:"",
-    experience:$("edExperience").value,
-    skills:$("edSkills").value,
-    projects:$("edProjects").value,
+    summary:cleanSectionText($("edSummary").value),
+    education:$("edEducation")?cleanSectionText($("edEducation").value):"",
+    experience:cleanSectionText($("edExperience").value),
+    skills:cleanSectionText($("edSkills").value),
+    projects:cleanSectionText($("edProjects").value),
   };
   if(S.activeResume){
     // Save unsaved draft to list
@@ -808,23 +960,85 @@ function saveEdits(){
 }
 
 function dlResume(fmt){
-  const r=S.activeResume||(S.activeResumeId?S.resumes.find(x=>x.id===S.activeResumeId):null);
+  const r=S.activeDocType==="cover"
+    ? S.activeCoverLetter||(S.activeCoverLetterId?S.coverLetters.find(x=>x.id===S.activeCoverLetterId):null)
+    : S.activeResume||(S.activeResumeId?S.resumes.find(x=>x.id===S.activeResumeId):null);
   if(r) dlResumeById(r,fmt);
 }
 
 function dlResumeById(rOrId,fmt){
-  const r=typeof rOrId==="string"?S.resumes.find(x=>x.id===rOrId):rOrId;
+  const list=S.activeDocType==="cover"?S.coverLetters:S.resumes;
+  const r=typeof rOrId==="string"?list.find(x=>x.id===rOrId):rOrId;
   if(!r) return;
+  if(r.type==="cover"){
+    if(fmt==="docx"){dlBlob(`${r.name}.docx`,mkCoverLetterDocx(r),"application/vnd.openxmlformats-officedocument.wordprocessingml.document");return;}
+    dlBlob(`${r.name}.pdf`,mkCoverLetterPdf(r),"application/pdf");
+    return;
+  }
   if(fmt==="docx"){dlBlob(`${r.name}.docx`,mkDocx(r),"application/vnd.openxmlformats-officedocument.wordprocessingml.document");return;}
   dlBlob(`${r.name}.pdf`,mkResumePdf(r),"application/pdf");
 }
 
+function templateCoverLetter(p,job){
+  const name=p.name||"Candidate";
+  const company=job.company||"your team";
+  const title=job.title||"this role";
+  const skills=(p.skills||[]).slice(0,5).join(", ");
+  const exp=p.experience?.[0];
+  const evidence=exp?`My background as ${exp.title||"a professional"} at ${exp.company||"my organization"} has given me relevant experience with ${skills}.`:`My profile includes relevant experience with ${skills}.`;
+  return `Dear ${company} Hiring Team,\n\nI am excited to apply for the ${title} position at ${company}. ${evidence}\n\nI am especially interested in this opportunity because it aligns with my target role and the strengths reflected in my profile. I would bring a focused, analytical approach and a strong commitment to learning the role quickly.\n\nThank you for your time and consideration. I would welcome the opportunity to discuss how my background can contribute to your team.\n\nSincerely,\n${name}`;
+}
+
 function formatEducation(items){
   return (items||[]).map(e=>{
-    const degree=[e.degree,e.major].filter(Boolean).join(" ");
-    const dates=[e.start,e.end].filter(Boolean).join("-");
+    const degree=formatDegree(e.degree,e.major);
+    const dates=[cleanText(e.start),cleanText(e.end)].filter(Boolean).join("-");
     return [e.school,degree,dates].filter(Boolean).join(" | ");
   }).filter(Boolean).join("\n");
+}
+
+function cleanText(v){
+  const text=String(v||"").trim();
+  return ["","nan","none","null","not provided","[not provided]"].includes(text.toLowerCase())?"":text;
+}
+
+function cleanSectionText(v){
+  const text=cleanText(v);
+  if(!text) return "";
+  const normalized=text.toLowerCase().replace(/\s+/g," ").replace(/[.。]+$/,"").trim();
+  const placeholders=[
+    "no projects", "projects provided", "projects added",
+    "no experience", "experience added", "no certifications",
+    "not provided"
+  ];
+  return placeholders.some(p=>normalized.includes(p))?"":text;
+}
+
+function setResumeField(id,value,alwaysShow=false){
+  const field=$(id);
+  if(!field) return;
+  const text=cleanSectionText(value);
+  field.value=text;
+  const label=field.previousElementSibling;
+  const show=alwaysShow||Boolean(text);
+  field.style.display=show?"":"none";
+  if(label&&label.tagName==="H5") label.style.display=show?"":"none";
+}
+
+function formatDegree(degree,major){
+  const deg=cleanText(degree), maj=cleanText(major), dl=deg.toLowerCase(), ml=maj.toLowerCase();
+  if(["master","masters","ms","m.s.","m.s"].includes(dl)){
+    if(ml.includes("business analytics")) return "Master of Science in Business Analytics";
+    return maj?`Master of Science in ${maj}`:"Master";
+  }
+  if(["bachelor","bachelors","bs","b.s.","ba","b.a."].includes(dl)){
+    return maj?`Bachelor of Science in ${maj}`:"Bachelor";
+  }
+  if(["phd","ph.d.","doctorate"].includes(dl)){
+    return maj?`PhD in ${maj}`:"PhD";
+  }
+  if(deg&&maj) return `${deg} in ${maj}`;
+  return deg||maj;
 }
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
@@ -903,6 +1117,49 @@ function mkResumePdf(r){
   return new Blob([pdf],{type:"application/pdf"});
 }
 
+function mkCoverLetterPdf(r){
+  const plines=(r.personalHeader||"").split("\n");
+  const nm=plines[0]||"";
+  const contact=plines[1]||"";
+  const W=612, H=792, ML=72, MR=72, textW=W-ML-MR;
+  let stream="";
+  let y=740;
+  stream+=`BT\n/Hb 16 Tf\n${ML} ${y} Td\n(${pesc(nm)}) Tj\nET\n`;
+  y-=22;
+  if(contact){
+    stream+=`BT\n/H 10 Tf\n0.4 0.4 0.4 rg\n${ML} ${y} Td\n(${pesc(contact)}) Tj\nET\n`;
+    y-=18;
+  }
+  stream+=`0.02 0.47 0.34 RG\n1.5 w\n${ML} ${y} m\n${W-MR} ${y} l\nS\n0 0 0 RG\n0 w\n`;
+  y-=28;
+  (r.letter||"").split("\n").forEach(line=>{
+    if(y<60) return;
+    const wrapped=wrapLine(line.trim(),textW,5.8);
+    wrapped.forEach(wl=>{
+      if(y<60) return;
+      stream+=`BT\n/H 10 Tf\n0 0 0 rg\n${ML} ${y} Td\n(${pesc(wl)}) Tj\nET\n`;
+      y-=14;
+    });
+    if(!line.trim()) y-=8;
+  });
+  const streamBytes=new TextEncoder().encode(stream);
+  const objs=[
+    `1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n`,
+    `2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n`,
+    `3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /Font << /H 4 0 R /Hb 5 0 R >> >> /Contents 6 0 R >>\nendobj\n`,
+    `4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n`,
+    `5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>\nendobj\n`,
+  ];
+  objs.push(`6 0 obj\n<< /Length ${streamBytes.length} >>\nstream\n${stream}\nendstream\nendobj\n`);
+  let pdf="%PDF-1.4\n";const offs=[0];
+  objs.forEach(o=>{offs.push(pdf.length);pdf+=o;});
+  const xr=pdf.length;
+  pdf+=`xref\n0 ${objs.length+1}\n0000000000 65535 f \n`;
+  offs.slice(1).forEach(o=>{pdf+=`${String(o).padStart(10,"0")} 00000 n \n`;});
+  pdf+=`trailer\n<< /Size ${objs.length+1} /Root 1 0 R >>\nstartxref\n${xr}\n%%EOF`;
+  return new Blob([pdf],{type:"application/pdf"});
+}
+
 function wrapLine(line,maxPts,charW){
   const max=Math.floor(maxPts/charW);
   if(!line) return [""];
@@ -933,6 +1190,24 @@ function mkDocx(r){
   addSec("EXPERIENCE",r.experience);
   addSec("SKILLS",r.skills);
   addSec("PROJECTS",r.projects);
+  const doc=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1080" w:right="1080" w:bottom="1080" w:left="1080"/></w:sectPr></w:body></w:document>`;
+  const files={
+    "[Content_Types].xml":`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>`,
+    "_rels/.rels":`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`,
+    "word/document.xml":doc
+  };
+  return new Blob([mkZip(files)],{type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
+}
+
+function mkCoverLetterDocx(r){
+  const boldPara=(text,sz=28)=>`<w:p><w:pPr><w:spacing w:after="60"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="${sz}"/></w:rPr><w:t xml:space="preserve">${xesc(text)}</w:t></w:r></w:p>`;
+  const normal=(text)=>`<w:p><w:pPr><w:spacing w:after="80"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">${xesc(text)}</w:t></w:r></w:p>`;
+  const hr=`<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="047857"/></w:pBdr><w:spacing w:after="180"/></w:pPr></w:p>`;
+  const plines=(r.personalHeader||"").split("\n");
+  let body=boldPara(plines[0]||"",30);
+  if(plines[1]) body+=normal(plines[1]);
+  body+=hr;
+  (r.letter||"").split("\n").forEach(l=>{body+=normal(l);});
   const doc=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1080" w:right="1080" w:bottom="1080" w:left="1080"/></w:sectPr></w:body></w:document>`;
   const files={
     "[Content_Types].xml":`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>`,

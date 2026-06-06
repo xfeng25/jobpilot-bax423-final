@@ -35,7 +35,7 @@ from backend.pipeline.ingestion import load_all_jobs, market_insights
 from backend.pipeline.matching import EmbeddingIndex, TFIDFBaseline, run_pipeline
 from backend.pipeline.feedback import FeedbackLearner
 from backend.pipeline.resume_parser import parse_pdf
-from backend.pipeline.resume_generator import generate as gen_resume
+from backend.pipeline.resume_generator import generate as gen_resume, generate_cover_letter as gen_cover_letter
 
 print("[Startup] Loading jobs...")
 job_data = load_all_jobs(KAGGLE_CSV, ADZUNA_APP_ID, ADZUNA_APP_KEY)
@@ -78,6 +78,20 @@ def health():
             "adzuna_count": INGESTION_STATS["adzuna_count"],
         },
         "lectures": ["Lecture 3: streaming ingestion", "Lecture 5: TF-IDF+SVD embeddings", "Lecture 6: implicit feedback learning", "Lecture 7: multi-stage ranking pipeline"],
+    }
+
+
+@app.get("/api/dashboard")
+def dashboard():
+    return {
+        "job_count": len(JOBS),
+        "ingestion": {
+            "kaggle_count": INGESTION_STATS["kaggle_count"],
+            "adzuna_count": INGESTION_STATS["adzuna_count"],
+            "duplicates_removed": INGESTION_STATS["duplicates_removed"],
+        },
+        "insights": INSIGHTS,
+        "top_opportunities": _top_opportunities(JOBS),
     }
 
 
@@ -134,7 +148,7 @@ def search_jobs(req: SearchRequest):
     return {
         **result,
         "market_insights": insights,
-        "learned_preferences": LEARNER.learned_preferences(),
+        "learned_preferences": LEARNER.learned_preferences(profile_id),
         "ingestion_stats": {
             "total_ingested": INGESTION_STATS["total_ingested"],
             "duplicates_removed": INGESTION_STATS["duplicates_removed"],
@@ -160,8 +174,8 @@ def record_feedback(req: FeedbackRequest):
     LEARNER.record(req.profile_id, req.job_id, req.action, job)
     return {
         "status": "recorded",
-        "learned_preferences": LEARNER.learned_preferences(),
-        "feedback_summary": LEARNER.summary(),
+        "learned_preferences": LEARNER.learned_preferences(req.profile_id),
+        "feedback_summary": LEARNER.summary(req.profile_id),
     }
 
 
@@ -178,6 +192,19 @@ def generate_resume(req: ResumeRequest):
     return {
         "id": resume_id,
         "name": f"Resume_{req.job.get('title','').replace(' ','_')}_{req.job.get('company','').replace(' ','_')}",
+        "job_title": req.job.get("title", ""),
+        "company": req.job.get("company", ""),
+        **result,
+    }
+
+
+@app.post("/api/cover-letter/generate")
+def generate_cover_letter(req: ResumeRequest):
+    result = gen_cover_letter(req.profile, req.job, api_key=ANTHROPIC_API_KEY)
+    letter_id = uuid.uuid4().hex[:12]
+    return {
+        "id": letter_id,
+        "name": f"Cover_Letter_{req.job.get('title','').replace(' ','_')}_{req.job.get('company','').replace(' ','_')}",
         "job_title": req.job.get("title", ""),
         "company": req.job.get("company", ""),
         **result,
@@ -207,3 +234,39 @@ def benchmark():
         "advantage": "LSA captures semantic similarity (e.g. 'ML Engineer' ≈ 'Applied Scientist') while TF-IDF only matches exact keywords",
         "feedback_summary": LEARNER.summary(),
     }
+
+
+def _top_opportunities(jobs: list[dict], limit: int = 8) -> list[dict[str, Any]]:
+    grouped: dict[tuple[str, str], dict[str, Any]] = {}
+    for job in jobs:
+        title = (job.get("title") or "").strip()
+        location = (job.get("location") or "").strip()
+        if not title:
+            continue
+        key = (title.lower(), location.lower())
+        bucket = grouped.setdefault(key, {
+            "title": title,
+            "location": location or "Not specified",
+            "count": 0,
+            "salary_values": [],
+            "companies": {},
+        })
+        bucket["count"] += 1
+        company = (job.get("company") or "Unknown").strip()
+        bucket["companies"][company] = bucket["companies"].get(company, 0) + 1
+        lo, hi = job.get("salary_min", 0), job.get("salary_max", 0)
+        if lo or hi:
+            bucket["salary_values"].append((lo + hi) / 2 if lo and hi else lo or hi)
+    rows = []
+    for bucket in grouped.values():
+        companies = sorted(bucket["companies"].items(), key=lambda x: -x[1])
+        salaries = bucket["salary_values"]
+        avg_salary = int(sum(salaries) / len(salaries)) if salaries else 0
+        rows.append({
+            "title": bucket["title"],
+            "company": companies[0][0] if companies else "Unknown",
+            "location": bucket["location"],
+            "job_count": bucket["count"],
+            "avg_salary": avg_salary,
+        })
+    return sorted(rows, key=lambda x: (-x["job_count"], x["title"]))[:limit]
