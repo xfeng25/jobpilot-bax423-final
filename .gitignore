@@ -7,3 +7,6 @@ backend/uploads/*
 !backend/uploads/.gitkeep
 .venv/
 venv/
+
+# Full dataset snapshot (download separately, see README)
+data/jobs.csv

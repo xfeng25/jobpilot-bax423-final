@@ -16,7 +16,7 @@ const PERSONAS = {
     dealbreakers:["No Senior Roles","No Staff Roles","No Defense Companies","No 5+ Years ML Required"]
   },
   marcus:{
-    name:"Marcus Chen",email:"marcus.chen@ucdavis.edu",phone:"530-555-0187",
+    name:"Marcus Chen",email:"marcus.chen@example.com",phone:"530-555-0187",
     linkedin:"linkedin.com/in/marcuschen-msba",currentLocation:"Davis, CA",workAuth:"U.S. Citizen",
     education:[{school:"UC Davis",degree:"Master",major:"Business Analytics",start:"2024-09",end:"2026-06"}],
     experience:[

@@ -27,6 +27,12 @@ if env_path.exists():
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 KAGGLE_CSV = os.getenv("KAGGLE_CSV", str(ROOT / "data" / "jobs.csv"))
+# The full 30,000-row snapshot is not stored in the repository (see README).
+# Fall back to the 2,000-row sample so the app always starts.
+if not Path(KAGGLE_CSV).is_absolute():
+    KAGGLE_CSV = str(ROOT / KAGGLE_CSV)
+if not Path(KAGGLE_CSV).exists():
+    KAGGLE_CSV = str(ROOT / "data" / "jobs_sample.csv")
 ADZUNA_APP_ID = os.getenv("ADZUNA_APP_ID", "")
 ADZUNA_APP_KEY = os.getenv("ADZUNA_APP_KEY", "")
 
